@@ -19,7 +19,7 @@ export const FlowPilotLightTheme = {
   colors: {
     ...NavigationLightTheme.colors,
     background: '#b7c7dd',   // soft blue-gray
-    card: '#e8dd72',         // aged paper yellow
+    card: '#fdba11',         // aged paper yellow
     text: '#1a1c23',         // dark slate
     border: '#aeb8c4',       // cool neutral border
   },

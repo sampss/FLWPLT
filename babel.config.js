@@ -8,8 +8,11 @@ module.exports = {
         alias: {
           '@features': './src/features',
           '@navigation': './src/navigation',
-          '@components': './src/components',
+          '@shared_components': './src/shared/components',
           '@shared': './src/shared',
+          '@typesafe': './src/typesafe',
+          '@task_components': './src/features/tasks/components',
+          '@shared_services': './src/shared/services',
         },
       },
     ],

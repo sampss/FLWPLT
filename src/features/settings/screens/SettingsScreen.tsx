@@ -21,7 +21,7 @@ export const SettingsScreen = () => {
         </TouchableOpacity>
 
         <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-          Flow Pilot
+          Flow Pilot - Settings
         </Text>
 
         <View style={styles.rightSpacer} />
@@ -38,7 +38,7 @@ export const SettingsScreen = () => {
         </Text>
 
         <Switch
-          value={manualTheme === 'dark'}
+          value={manualTheme === 'dark' || (manualTheme === null && theme.dark)}
           onValueChange={(value) => setManualTheme(value ? 'dark' : 'light')}
         />
       </View>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation, useTheme } from '@react-navigation/native';
+import AppHeader from '@shared_components/AppHeader';
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -10,20 +11,7 @@ export const HomeScreen: React.FC = () => {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => navigation.openDrawer()}
-        >
-          <Text style={[styles.menuIcon, { color: theme.colors.text }]}>☰</Text>
-        </TouchableOpacity>
-
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-          Flow Pilot
-        </Text>
-
-        <View style={styles.rightSpacer} />
-      </View>
+      <AppHeader title="Flow Pilot" />
 
       {/* Feed 1: Tasks */}
       <View style={[styles.feedBlock, { backgroundColor: theme.colors.card }]}>
@@ -51,35 +39,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingTop: 48,
-  },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-
-  menuButton: {
-    width: 40,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-  },
-
-  menuIcon: {
-    fontSize: 26,
-  },
-
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 28,
-    fontWeight: '700',
-  },
-
-  rightSpacer: {
-    width: 40,
+    paddingTop: 12,
   },
 
   feedBlock: {
