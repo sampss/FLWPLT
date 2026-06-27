@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Switch } from 'react-native';
 import { ThemeContext } from '../../../theme/ThemeContext';
 import { useNavigation, useTheme } from '@react-navigation/native';
+import AppHeader from '@shared_components/AppHeader';
 
 export const SettingsScreen = () => {
   const { manualTheme, setManualTheme } = useContext(ThemeContext);
@@ -11,21 +12,8 @@ export const SettingsScreen = () => {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => navigation.openDrawer()}
-        >
-          <Text style={[styles.menuIcon, { color: theme.colors.text }]}>☰</Text>
-        </TouchableOpacity>
-
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-          Flow Pilot - Settings
-        </Text>
-
-        <View style={styles.rightSpacer} />
-      </View>
+      {/* HEADER ROW */}
+      <AppHeader title="Settings"  />
 
       {/* Content */}
       <View style={{ flex: 1, padding: 20 }}>

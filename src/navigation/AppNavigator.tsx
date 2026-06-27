@@ -3,7 +3,7 @@ import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { HomeScreen } from '@features/home/screens/HomeScreen';
-import { TasksScreen } from '@features/tasks/screens/TaskListScreen';
+import   TasksScreen  from '@features/tasks/screens/TaskListScreen';
 
 // --- Move ALL components OUTSIDE the navigator ---
 const ScheduleScreen = () => (

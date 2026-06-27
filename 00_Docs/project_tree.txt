@@ -1,0 +1,61 @@
+﻿|-- .bundle
+    |-- config
+|-- .github
+    |-- modernize
+        |-- java-upgrade
+            |-- hooks
+                |-- scripts
+                    |-- recordToolUse.ps1
+                    |-- recordToolUse.sh
+            |-- .gitignore
+|-- .vscode
+    |-- settings.json
+|-- src
+    |-- features
+        |-- home
+            |-- screens
+                |-- HomeScreen.tsx
+        |-- settings
+            |-- screens
+                |-- SettingsScreen.tsx
+        |-- tasks
+            |-- components
+                |-- TaskCard.tsx
+            |-- screens
+                |-- TaskListScreen.tsx
+                |-- TaskListScreenStyles.tsx
+            |-- services
+                |-- ArchiveService.ts
+                |-- TaskService.ts
+    |-- navigation
+        |-- AppNavigator.tsx
+        |-- RootNavigator.tsx
+    |-- shared
+        |-- components
+            |-- AppHeader.tsx
+            |-- ArchiveButton.tsx
+        |-- services
+            |-- ArchiveService.ts
+    |-- theme
+        |-- FlowPilotTheme.ts
+        |-- ThemeContext.tsx
+    |-- typesafe
+        |-- Task.ts
+|-- __tests__
+    |-- App.test.tsx
+|-- .eslintrc.js
+|-- .gitignore
+|-- .prettierrc.js
+|-- .watchmanconfig
+|-- app.json
+|-- App.tsx
+|-- babel.config.js
+|-- Gemfile
+|-- index.js
+|-- jest.config.js
+|-- LICENSE
+|-- metro.config.js
+|-- package-lock.json
+|-- package.json
+|-- README.md
+|-- tsconfig.json

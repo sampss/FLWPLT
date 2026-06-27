@@ -1,228 +1,234 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
-  FlatList,
   Text,
-  Pressable,
   TextInput,
-  Button,
+  Pressable,
+  FlatList,
+  Modal,
+  StyleSheet,
   Platform,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useTheme, useNavigation } from '@react-navigation/native';
+import { useTheme } from '@react-navigation/native';
+
 import AppHeader from '@shared_components/AppHeader';
-
-import { Task } from '@typesafe/Task';
-import TaskCard from '@task_components/TaskCard';
 import ArchiveButton from '@shared_components/ArchiveButton';
-import { archiveCompletedTasks, mockArchiveWrite } from '@shared_services/ArchiveService';
-import { makeTaskStyles } from '@features/tasks/screens/TaskListScreenStyles';
 
-export const TasksScreen: React.FC = () => {
-  const theme = useTheme();
-  const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
-  const styles = makeTaskStyles(theme);
+import TaskCard from '@task_components/TaskCard';
+import TaskService from '@tasks/services/TaskService';
+import ArchiveService from '@tasks/services/ArchiveService';
+import { Task } from '@typesafe/Task';
+
+
+
+const TasksScreen: React.FC = () => {
+  const { colors } = useTheme();
 
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [query, setQuery] = useState('');
-  const [mode, setMode] = useState<'add' | 'search'>('add');
-  const [completeBy, setCompleteBy] = useState<string | undefined>();
-  const [filterDate, setFilterDate] = useState<string | undefined>();
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [displayedTasks, setDisplayedTasks] = useState<Task[]>([]);
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [searchMode, setSearchMode] = useState(false);
+  const [searchText, setSearchText] = useState('');
 
-  const isMountedRef = useRef(true);
+  const [addMode, setAddMode] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newDueAt, setNewDueAt] = useState<string | undefined>(undefined);
+  const [showAddDatePicker, setShowAddDatePicker] = useState(false);
+
+  const [filterDate, setFilterDate] = useState<string | null>(null);
+  const [showFilterPicker, setShowFilterPicker] = useState(false);
+
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+
+  const [selectedForArchive, setSelectedForArchive] = useState<number[]>([]);
+
+  /* ---------------------- LOAD TASKS ---------------------- */
+  const loadTasks = async () => {
+    const all = await TaskService.getAllTasks();
+    setTasks(all);
+  };
 
   useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
+    loadTasks();
   }, []);
 
-  // -----------------------------
-  // FILTERING
-  // -----------------------------
-  const applyFilters = () => {
-    const normalized = query.toLowerCase();
+  /* ---------------------- ADD TASK ---------------------- */
+  const handleAddTask = async () => {
+    if (!newTitle.trim()) return;
 
-    if (mode === 'search') {
-      setDisplayedTasks(
-        tasks.filter(task => {
-          const matchesQuery = task.title.toLowerCase().includes(normalized);
-          const matchesDate =
-            !filterDate ||
-            (task.completeBy &&
-              new Date(task.completeBy).toDateString() ===
-                new Date(filterDate).toDateString());
-
-          return matchesQuery && matchesDate;
-        })
-      );
-    } else {
-      setDisplayedTasks(tasks);
-    }
-  };
-
-  useEffect(() => {
-    applyFilters();
-  }, [query, tasks, mode]);
-
-  useEffect(() => {
-    if (mode === 'search') applyFilters();
-  }, [filterDate]);
-
-  // -----------------------------
-  // CRUD OPERATIONS
-  // -----------------------------
-  const handleAddTask = (title: string, date?: string) => {
     const newTask: Task = {
       id: Date.now(),
-      title,
-      completed: false,
-      createdAt: new Date().toISOString(),
-      completeBy: date,
-      details: '',
+      title: newTitle.trim(),
+      notes: '',
+      isCompleted: false,
+      dueAt: newDueAt,
+      createdAt: new Date().toISOString(), // in-memory only
     };
 
-    setTasks(prev => [newTask, ...prev]);
-    setQuery('');
-    setCompleteBy(undefined);
+    await TaskService.addTask(newTask);
+    setNewTitle('');
+    setNewDueAt(undefined);
+    setAddMode(false);
+    loadTasks();
   };
 
-  const handleToggleComplete = (taskId: number) => {
-    setTasks(prev =>
-      prev.map(task =>
-        task.id === taskId ? { ...task, completed: !task.completed } : task
-      )
-    );
-  };
-
-  const handleUpdateDetails = (id: number, newDetails: string, newDate?: string) => {
-    setTasks(prev =>
-      prev.map(task =>
-        task.id === id
-          ? { ...task, details: newDetails, completeBy: newDate ?? task.completeBy }
-          : task
-      )
-    );
-  };
-
-  const confirmDelete = (taskId: number) => {
-    setPendingDeleteId(taskId);
-    setDeleteModalVisible(true);
-  };
-
-  const handleArchiveSelected = async () => {
-    const selected = tasks.filter(t => t.completed);
-    if (selected.length === 0) return;
-
-    try {
-      await archiveCompletedTasks(selected, mockArchiveWrite, { appId: 'FlowPilot' });
-      setTasks(prev => prev.filter(t => !t.completed));
-    } catch (error) {
-      console.error('Archive failed:', error);
+  /* ---------------------- DELETE TASK ---------------------- */
+  const confirmDelete = async () => {
+    if (deleteId !== null) {
+      await TaskService.deleteTask(deleteId);
+      setDeleteId(null);
+      loadTasks();
     }
   };
 
-  // -----------------------------
-  // RENDER
-  // -----------------------------
+  /* ---------------------- UPDATE DETAILS ---------------------- */
+  const handleUpdateDetails = async (
+    id: number,
+    notes: string,
+    dueAt?: string,
+    title?: string
+  ) => {
+    await TaskService.updateTask(id, { notes, dueAt, title });
+    loadTasks();
+  };
+
+  /* ---------------------- TOGGLE COMPLETE ---------------------- */
+  const handleToggleComplete = async (id: number) => {
+    await TaskService.toggleComplete(id);
+    loadTasks();
+  };
+
+  /* ---------------------- ARCHIVE ---------------------- */
+  const handleArchive = async () => {
+    if (selectedForArchive.length === 0) return;
+
+    await ArchiveService.archiveTasks(selectedForArchive);
+    setSelectedForArchive([]);
+    loadTasks();
+  };
+
+  /* ---------------------- FILTERED TASKS ---------------------- */
+  const filteredTasks = tasks.filter((t) => {
+    if (searchMode && searchText.trim()) {
+      return t.title.toLowerCase().includes(searchText.toLowerCase());
+    }
+    if (filterDate) {
+      return t.dueAt && t.dueAt.startsWith(filterDate);
+    }
+    return true;
+  });
+
+  /* ---------------------- RENDER ---------------------- */
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
 
-      {/* Header */}
-      <AppHeader
-        title="Tasks"
-        rightElement={<ArchiveButton onPress={handleArchiveSelected} />}
-      />
+      {/* HEADER ROW */}
+      <AppHeader title="Tasks" rightElement={<ArchiveButton onPress={handleArchive} />} />
 
-      {/* INPUT ROW */}
+      {/* SEARCH / ADD TOGGLE */}
       <View style={styles.inputRow}>
         <Pressable
-          onPress={() => setMode('add')}
-          style={[styles.iconButton, mode === 'add' && styles.activeIcon]}
-        >
-          <Text style={{ fontSize: 20 }}>✏️</Text>
-        </Pressable>
-
-        <TextInput
-          style={styles.input}
-          value={query}
-          onChangeText={setQuery}
-          placeholder={mode === 'add' ? 'Add a task...' : 'Search tasks...'}
-          placeholderTextColor={theme.colors.text + '88'}
-        />
-
-        <Pressable
-          onPress={() => setMode('search')}
-          style={[styles.iconButton, mode === 'search' && styles.activeIcon]}
+          onPress={() => {
+            setSearchMode(true);
+            setAddMode(false);
+          }}
+          style={[styles.iconButton, searchMode && styles.activeIcon]}
         >
           <Text style={{ fontSize: 20 }}>🔍</Text>
         </Pressable>
+
+        <Pressable
+          onPress={() => {
+            setAddMode(true);
+            setSearchMode(false);
+          }}
+          style={[styles.iconButton, addMode && styles.activeIcon]}
+        >
+          <Text style={{ fontSize: 20 }}>➕</Text>
+        </Pressable>
       </View>
 
-      {/* DATE + ADD BUTTON */}
+      {/* SEARCH MODE */}
+      {searchMode && (
+        <TextInput
+          value={searchText}
+          onChangeText={setSearchText}
+          placeholder="Search tasks..."
+          style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+        />
+      )}
+
+      {/* ADD MODE */}
+      {addMode && (
+        <View>
+          <TextInput
+            value={newTitle}
+            onChangeText={setNewTitle}
+            placeholder="Add a task..."
+            style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+          />
+
+          <Pressable
+            onPress={() => setShowAddDatePicker(true)}
+            style={styles.dateButton}
+          >
+            <Text style={styles.dateButtonText}>
+              {newDueAt ? `📅 ${new Date(newDueAt).toDateString()}` : 'Set Due Date'}
+            </Text>
+          </Pressable>
+
+          {showAddDatePicker && (
+            <DateTimePicker
+              value={newDueAt ? new Date(newDueAt) : new Date()}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={(event, selectedDate) => {
+                setShowAddDatePicker(false);
+                if (event.type !== 'dismissed' && selectedDate) {
+                  setNewDueAt(selectedDate.toISOString());
+                }
+              }}
+            />
+          )}
+
+          <Pressable
+            onPress={handleAddTask}
+            style={[styles.addButton, { backgroundColor: colors.primary }]}
+          >
+            <Text style={styles.addButtonText}>Add Task</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* DATE FILTER */}
       <View style={styles.addControls}>
         <Pressable
-          onPress={() => setShowDatePicker(true)}
+          onPress={() => setShowFilterPicker(true)}
           style={styles.dateButton}
         >
           <Text style={styles.dateButtonText}>
-            {mode === 'add'
-              ? completeBy
-                ? `📅 ${new Date(completeBy).toDateString()}`
-                : '📅 Due Date'
-              : filterDate
-                ? `🔎 ${new Date(filterDate).toDateString()}`
-                : '🔎 Filter Due Date'}
+            {filterDate ? `Filter: ${filterDate}` : 'Filter by Date'}
           </Text>
         </Pressable>
 
-        {mode === 'search' && filterDate && (
+        {filterDate && (
           <Pressable
-            onPress={() => setFilterDate(undefined)}
+            onPress={() => setFilterDate(null)}
             style={styles.clearFilter}
           >
-            <Text style={styles.clearFilterText}>✖️ Clear</Text>
+            <Text style={styles.clearFilterText}>Clear</Text>
           </Pressable>
-        )}
-
-        {mode === 'add' && (
-          <View style={styles.addButtonWrapper}>
-            <Button
-              title="Add"
-              onPress={() => {
-                if (query.trim()) handleAddTask(query.trim(), completeBy);
-              }}
-            />
-          </View>
         )}
       </View>
 
-      {/* DATE PICKER */}
-      {showDatePicker && (
+      {showFilterPicker && (
         <DateTimePicker
-          value={
-            mode === 'add'
-              ? completeBy
-                ? new Date(completeBy)
-                : new Date()
-              : filterDate
-                ? new Date(filterDate)
-                : new Date()
-          }
+          value={new Date()}
           mode="date"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           onChange={(event, selectedDate) => {
-            setShowDatePicker(false);
+            setShowFilterPicker(false);
             if (event.type !== 'dismissed' && selectedDate) {
-              const iso = selectedDate.toISOString();
-              if (mode === 'add') setCompleteBy(iso);
-              else setFilterDate(iso);
+              setFilterDate(selectedDate.toISOString().split('T')[0]);
             }
           }}
         />
@@ -230,54 +236,179 @@ export const TasksScreen: React.FC = () => {
 
       {/* TASK LIST */}
       <FlatList
-        data={displayedTasks}
-        keyExtractor={item => item.id.toString()}
+        data={filteredTasks}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <TaskCard
             task={item}
             onToggleComplete={handleToggleComplete}
-            onDelete={confirmDelete}
+            onDelete={(id) => setDeleteId(id)}
             onUpdateDetails={handleUpdateDetails}
           />
         )}
       />
 
-      {/* DELETE MODAL */}
-      {deleteModalVisible && (
+      {/* DELETE CONFIRMATION MODAL */}
+      <Modal visible={deleteId !== null} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Delete Task?</Text>
+          <View style={[styles.modalBox, { backgroundColor: colors.card }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Delete Task?
+            </Text>
 
-            <Text style={styles.modalMessage}>
-              This will permanently delete the task.
+            <Text style={[styles.modalMessage, { color: colors.text }]}>
+              Are you sure you want to delete this task?
             </Text>
 
             <View style={styles.modalButtons}>
               <Pressable
-                onPress={() => {
-                  setDeleteModalVisible(false);
-                  setPendingDeleteId(null);
-                }}
-                style={styles.modalButton}
+                onPress={() => setDeleteId(null)}
+                style={[styles.modalButton, styles.cancelButton]}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={{ color: colors.text }}>Cancel</Text>
               </Pressable>
 
               <Pressable
-                onPress={() => {
-                  if (pendingDeleteId !== null) {
-                    setTasks(prev => prev.filter(t => t.id !== pendingDeleteId));
-                  }
-                  setDeleteModalVisible(false);
-                  setPendingDeleteId(null);
-                }}
+                onPress={confirmDelete}
+                style={[styles.modalButton, styles.deleteButton]}
               >
-                <Text style={styles.deleteButton}>Delete</Text>
+                <Text style={{ color: '#fff' }}>Delete</Text>
               </Pressable>
             </View>
           </View>
         </View>
-      )}
+      </Modal>
     </View>
   );
 };
+
+export default TasksScreen;
+
+/* ---------------------- Styles ---------------------- */
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  header: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  archiveButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  archiveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  iconButton: {
+    padding: 8,
+    opacity: 0.4,
+  },
+  activeIcon: {
+    opacity: 1,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    marginBottom: 12,
+  },
+  addControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  dateButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#eee',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#aaa',
+  },
+  dateButtonText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  clearFilter: {
+    marginLeft: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: '#eee',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#aaa',
+  },
+  clearFilterText: {
+    fontSize: 12,
+    color: '#444',
+    fontWeight: '500',
+  },
+  addButton: {
+    marginTop: 8,
+    paddingVertical: 10,
+    borderRadius: 6,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+
+  /* DELETE MODAL */
+  modalOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBox: {
+    width: '80%',
+    borderRadius: 10,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  modalMessage: {
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  modalButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  cancelButton: {
+    backgroundColor: '#eee',
+  },
+  deleteButton: {
+    backgroundColor: '#d22',
+  },
+});
